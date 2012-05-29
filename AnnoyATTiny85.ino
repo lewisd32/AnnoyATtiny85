@@ -1,3 +1,47 @@
+/*
+
+When this program runs, it first waits some time for configuration to be
+entered via the activation pin.  This configuration is entered by shorting
+the activation pin to Vcc.  When assembled using an ATtiny45/85, pin 2, the
+activation pin, is right beside the Vcc pin.  Nearly any metal object can
+be used to short the pins together.  I like using my house keys, since I
+always have them on me.
+
+Configuration is done in 4 stages:
+1. Activation
+2. Number of days to wait
+3. Ramp-up
+4. Test mode
+
+
+1. Activation
+
+When started, the program waits 5 seconds for the pins to be shorted
+to "activate" it.  If this initial activation isn't done, it pauses for
+3 seconds, and then goes into "super annoying" mode, where it beeps every
+2 seconds.  This should make it easy to find, if it's hidden, which
+prevents someone getting payback on you by trying to return the favour.
+(Unless, of course, they know about these instructions.)
+When successfully activated, it plays a single note.  If it isn't activated,
+it plays two descending notes.
+
+2. Number of days to wait
+3. Ramp-up
+4. Test mode
+
+
+
+After being activated, it then waits for the pins to be shorted any number
+of times, to configure how many days to wait before starting beeping.  It
+waits 1 second for each short, beeping each time it's shorted, to give
+feedback.  After a full second without a short, it beeps the number of
+times it was shorted, to ensure it was configured correctly.
+
+This sketch should fit on an ATtiny45.
+
+
+*/
+
 #include <avr/sleep.h>
 #include <avr/power.h>
 
@@ -21,7 +65,6 @@ int const TEST_MAX_COUNTER_TRIGGER = 4;
 int WATCHDOG_PARAM = 9; // 9 = 8 sec
 int const TEST_WATCHDOG_PARAM = 7; // 7 = 2 sec
 
-//long INITIAL_COUNTER_TRIGGER = 75; // 10 minutes
 long const DAY = 10800; // 10800 * 8 sec = 24 hours
 long INITIAL_COUNTER_TRIGGER = 1 * DAY;
 long TEST_INITIAL_COUNTER_TRIGGER = 3;
@@ -166,6 +209,9 @@ void setup() {
 
   readConfiguration();
 
+  // After reading configuration, if the user tapped the activation pin at all,
+  // millis() should be a fairly unique value.  If they didn't, then we're in
+  // "super annoying" more anyway, so it doesn't matter much.
   randomSeed(millis());
 
   //Power down various bits of hardware to lower power usage  
@@ -181,7 +227,7 @@ void setup() {
   newTriggerCounter();
   
   counter_trigger += INITIAL_COUNTER_TRIGGER;
-  setup_watchdog(WATCHDOG_PARAM); // 8 sec
+  setup_watchdog(WATCHDOG_PARAM);
 }
 
 volatile long watchdog_counter = 0;
